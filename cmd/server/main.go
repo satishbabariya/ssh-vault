@@ -24,7 +24,7 @@ func main() {
 	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
 		Root:   "/public",
 		Index:  "index.html",
-		Browse: true,
+		Browse: false,
 		HTML5:  true,
 	}))
 
