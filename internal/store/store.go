@@ -13,7 +13,7 @@ type Store struct {
 
 func Open(path string) (*Store, error) {
 	db, err := bolt.Open(path, 0600, &bolt.Options{
-		ReadOnly: true,
+		ReadOnly: false,
 	})
 	if err != nil {
 		return nil, err
