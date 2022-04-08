@@ -1,37 +1,38 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
+	"ssh-vault/internal/middleware/auth0"
 	"ssh-vault/internal/model"
 	"ssh-vault/internal/store"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	godotenv.Load()
 
 	if os.Getenv("AUTH0_ISSUER") == "" {
-		logrus.Fatal("AUTH0_ISSUER is not set")
+		log.Fatal("AUTH0_ISSUER is not set")
 	}
 
 	if os.Getenv("AUTH0_AUDIENCE") == "" {
-		logrus.Fatal("AUTH0_AUDIENCE is not set")
+		log.Fatal("AUTH0_AUDIENCE is not set")
 	}
 
 	if os.Getenv("VAULT_SECRET") == "" {
-		logrus.Fatal("VAULT_SECRET is not set")
+		log.Fatal("VAULT_SECRET is not set")
 	}
 }
 
 func main() {
 	store, err := store.Open("./vault.db")
 	if err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 	defer store.Close()
 
@@ -53,7 +54,16 @@ func main() {
 
 	app.Static("/", "/public")
 
-	app.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
+	api := app.Group("/api")
+	api.Use(auth0.New(auth0.Config{
+		Issuer:   os.Getenv("AUTH0_ISSUER"),
+		Audience: []string{os.Getenv("AUTH0_AUDIENCE")},
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			return fiber.NewError(http.StatusUnauthorized, err.Error())
+		},
+	}))
+
+	api.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
 		credential, err := store.Get(c.Params("host"))
 		if err != nil {
 			return fiber.NewError(http.StatusNotFound, err.Error())
@@ -64,7 +74,7 @@ func main() {
 		return c.Status(http.StatusOK).JSON(credential)
 	})
 
-	app.Post("/api/credentials", func(c *fiber.Ctx) error {
+	api.Post("/api/credentials", func(c *fiber.Ctx) error {
 		cred := new(model.Credential)
 		if err := c.BodyParser(cred); err != nil {
 			return fiber.NewError(http.StatusBadRequest, err.Error())
@@ -95,5 +105,5 @@ func main() {
 		return c.SendFile("/public/index.html")
 	})
 
-	app.Listen(":3000")
+	log.Fatal(app.Listen(":3000"))
 }
