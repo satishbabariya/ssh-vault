@@ -2,38 +2,98 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"ssh-vault/internal/model"
+	"ssh-vault/internal/store"
 
-	"github.com/auth0/go-jwt-middleware/v2/validator"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	// auth0 "github.com/satishbabariya/go-echo-auth0-middleware"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	godotenv.Load()
+
+	if os.Getenv("AUTH0_ISSUER") == "" {
+		logrus.Fatal("AUTH0_ISSUER is not set")
+	}
+
+	if os.Getenv("AUTH0_AUDIENCE") == "" {
+		logrus.Fatal("AUTH0_AUDIENCE is not set")
+	}
+
+	if os.Getenv("VAULT_SECRET") == "" {
+		logrus.Fatal("VAULT_SECRET is not set")
+	}
+}
+
 func main() {
-	e := echo.New()
-	e.HideBanner = true
+	store, err := store.Open("./vault.db")
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer store.Close()
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			// Status code defaults to 500
+			code := fiber.StatusInternalServerError
 
-	// e.Use(auth0.Auth0WithConfig(auth0.Auth0Config{
-	// 	Issuer:   "https://<your tenant domain>/",
-	// 	Audience: []string{"<your api identifier>"},
-	// }))
+			// Retrieve the custom status code if it's an fiber.*Error
+			if e, ok := err.(*fiber.Error); ok {
+				code = e.Code
+			}
 
-	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-		Root:   "/public",
-		Index:  "index.html",
-		Browse: false,
-		HTML5:  true,
-	}))
+			return c.Status(code).JSON(err)
+		},
+	})
+	// Default middleware config
+	app.Use(logger.New())
 
-	// Routes
-	e.GET("/api/validate", func(c echo.Context) error {
-		claims := c.Get("claims").(*validator.ValidatedClaims)
-		return c.JSON(http.StatusOK, claims)
+	app.Static("/", "/public")
+
+	app.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
+		credential, err := store.Get(c.Params("host"))
+		if err != nil {
+			return fiber.NewError(http.StatusNotFound, err.Error())
+		}
+		if credential == nil || credential.Host == "" {
+			return fiber.NewError(http.StatusNotFound, "Credential not found")
+		}
+		return c.Status(http.StatusOK).JSON(credential)
 	})
 
-	// Start server
-	e.Logger.Fatal(e.Start(":3000"))
+	app.Post("/api/credentials", func(c *fiber.Ctx) error {
+		cred := new(model.Credential)
+		if err := c.BodyParser(cred); err != nil {
+			return fiber.NewError(http.StatusBadRequest, err.Error())
+		}
+		if cred.Host == "" {
+			return fiber.NewError(http.StatusBadRequest, "Host is required")
+		}
+		if cred.User == "" {
+			return fiber.NewError(http.StatusBadRequest, "User is required")
+		}
+
+		if err := store.Add(*cred); err != nil {
+			return fiber.NewError(http.StatusInternalServerError, err.Error())
+		}
+
+		type response struct {
+			Host string `json:"host"`
+			Port int    `json:"port"`
+		}
+
+		return c.Status(http.StatusCreated).JSON(response{
+			Host: cred.Host,
+			Port: cred.Port,
+		})
+	})
+
+	app.All("*", func(c *fiber.Ctx) error {
+		return c.SendFile("/public/index.html")
+	})
+
+	app.Listen(":3000")
 }
