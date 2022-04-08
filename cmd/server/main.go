@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"ssh-vault/internal/middleware/auth0"
 	"ssh-vault/internal/model"
 	"ssh-vault/internal/store"
 
@@ -53,7 +54,16 @@ func main() {
 
 	app.Static("/", "/public")
 
-	app.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
+	api := app.Group("/api")
+	api.Use(auth0.New(auth0.Config{
+		Issuer:   os.Getenv("AUTH0_ISSUER"),
+		Audience: []string{os.Getenv("AUTH0_AUDIENCE")},
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			return fiber.NewError(http.StatusUnauthorized, err.Error())
+		},
+	}))
+
+	api.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
 		credential, err := store.Get(c.Params("host"))
 		if err != nil {
 			return fiber.NewError(http.StatusNotFound, err.Error())
@@ -64,7 +74,7 @@ func main() {
 		return c.Status(http.StatusOK).JSON(credential)
 	})
 
-	app.Post("/api/credentials", func(c *fiber.Ctx) error {
+	api.Post("/api/credentials", func(c *fiber.Ctx) error {
 		cred := new(model.Credential)
 		if err := c.BodyParser(cred); err != nil {
 			return fiber.NewError(http.StatusBadRequest, err.Error())
