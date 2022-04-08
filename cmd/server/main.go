@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"ssh-vault/internal/model"
@@ -9,29 +10,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	godotenv.Load()
 
 	if os.Getenv("AUTH0_ISSUER") == "" {
-		logrus.Fatal("AUTH0_ISSUER is not set")
+		log.Fatal("AUTH0_ISSUER is not set")
 	}
 
 	if os.Getenv("AUTH0_AUDIENCE") == "" {
-		logrus.Fatal("AUTH0_AUDIENCE is not set")
+		log.Fatal("AUTH0_AUDIENCE is not set")
 	}
 
 	if os.Getenv("VAULT_SECRET") == "" {
-		logrus.Fatal("VAULT_SECRET is not set")
+		log.Fatal("VAULT_SECRET is not set")
 	}
 }
 
 func main() {
 	store, err := store.Open("./vault.db")
 	if err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 	defer store.Close()
 
@@ -95,5 +95,5 @@ func main() {
 		return c.SendFile("/public/index.html")
 	})
 
-	app.Listen(":3000")
+	log.Fatal(app.Listen(":3000"))
 }
