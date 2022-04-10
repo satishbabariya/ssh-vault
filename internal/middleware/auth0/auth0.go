@@ -2,6 +2,7 @@ package auth0
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -109,6 +110,7 @@ func New(config ...Config) fiber.Handler {
 		// Get the JWT token from the request header.
 		claims, err := jwtValidator.ValidateToken(c.Context(), token)
 		if err != nil {
+			fmt.Println(err)
 			return cfg.ErrorHandler(c, err)
 		}
 

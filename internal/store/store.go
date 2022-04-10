@@ -75,3 +75,38 @@ func (s *Store) Get(host string) (*model.Credential, error) {
 
 	return &credential, nil
 }
+
+func (s *Store) Remotes() ([]model.Remote, error) {
+	var credentials []model.Credential
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("credentials"))
+		if b == nil {
+			return nil
+		}
+
+		return b.ForEach(func(k, v []byte) error {
+			var credential model.Credential
+			if err := json.Unmarshal(v, &credential); err != nil {
+				return err
+			}
+
+			credentials = append(credentials, credential)
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var remotes []model.Remote
+	for _, credential := range credentials {
+		remotes = append(remotes, model.Remote{
+			Host: credential.Host,
+			Port: credential.Port,
+		})
+	}
+
+	return remotes, nil
+}

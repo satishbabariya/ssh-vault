@@ -51,8 +51,12 @@ func main() {
 	})
 	// Default middleware config
 	app.Use(logger.New())
+	// app.Use(cors.New())
 
 	app.Static("/", "/public")
+	// app.All("*", func(c *fiber.Ctx) error {
+	// 	return c.SendFile("/public/index.html")
+	// })
 
 	api := app.Group("/api")
 	api.Use(auth0.New(auth0.Config{
@@ -63,7 +67,7 @@ func main() {
 		},
 	}))
 
-	api.Get("/api/credentials/:host", func(c *fiber.Ctx) error {
+	api.Get("/credentials/:host", func(c *fiber.Ctx) error {
 		credential, err := store.Get(c.Params("host"))
 		if err != nil {
 			return fiber.NewError(http.StatusNotFound, err.Error())
@@ -74,7 +78,15 @@ func main() {
 		return c.Status(http.StatusOK).JSON(credential)
 	})
 
-	api.Post("/api/credentials", func(c *fiber.Ctx) error {
+	api.Get("/credentials", func(c *fiber.Ctx) error {
+		credentials, err := store.Remotes()
+		if err != nil {
+			return fiber.NewError(http.StatusInternalServerError, err.Error())
+		}
+		return c.Status(http.StatusOK).JSON(credentials)
+	})
+
+	api.Post("/credentials", func(c *fiber.Ctx) error {
 		cred := new(model.Credential)
 		if err := c.BodyParser(cred); err != nil {
 			return fiber.NewError(http.StatusBadRequest, err.Error())
@@ -101,9 +113,5 @@ func main() {
 		})
 	})
 
-	app.All("*", func(c *fiber.Ctx) error {
-		return c.SendFile("/public/index.html")
-	})
-
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":1203"))
 }
