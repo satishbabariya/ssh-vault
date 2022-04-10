@@ -1,10 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import App from "./App";
+import { App } from "./App";
 
 import { Auth0Provider, AppState } from "@auth0/auth0-react";
 import { MantineProvider } from "@mantine/core";
 import { Auth0Config } from "./config";
+import { NotificationsProvider } from "@mantine/notifications";
 
 const onRedirectCallback = (appState?: AppState) => {
   window.history.replaceState({}, document.title, window.location.pathname);
@@ -26,7 +27,9 @@ ReactDOM.render(
           // fontFamily: "Greycliff CF, sans-serif",
         }}
       >
-        <App />
+        <NotificationsProvider position="top-right" zIndex={2077}>
+          <App />
+        </NotificationsProvider>
       </MantineProvider>
     </Auth0Provider>
   </React.StrictMode>,
