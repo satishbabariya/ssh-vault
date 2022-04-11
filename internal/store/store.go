@@ -17,20 +17,19 @@ type Store struct {
 }
 
 func NewStore(dsn string) (*Store, error) {
-
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	// Open a PostgreSQL database.
+	pgdb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
 	// maintains a pool of idle connections. To maximize pool performance
 	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
-	sqldb.SetMaxOpenConns(maxOpenConns)
-	sqldb.SetMaxIdleConns(maxOpenConns)
+	pgdb.SetMaxOpenConns(maxOpenConns)
+	pgdb.SetMaxIdleConns(maxOpenConns)
 
 	// create db
-	db := bun.NewDB(sqldb, pgdialect.New(), bun.WithDiscardUnknownColumns())
+	db := bun.NewDB(pgdb, pgdialect.New(), bun.WithDiscardUnknownColumns())
 
-	// log queries
-	db.AddQueryHook(bundebug.NewQueryHook())
-	bundebug.NewQueryHook(bundebug.WithVerbose(true))
+	// Print all queries to stdout.
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	return &Store{db: db}, nil
 }

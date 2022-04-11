@@ -45,33 +45,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// migrator := migrate.NewMigrator(db, migrations.Migrations)
-
-	// group, err := migrator.Migrate(context.Background())
-	// if err == nil {
-	// 	if group.IsZero() {
-	// 		log.Printf("there are no new migrations to run (database is up to date)\n")
-	// 	}
-	// }
-
-	// Initialize the database.
-	// store, err := store.NewStore(os.Getenv("DATABASE_URL"))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer store.Close()
-
-	// err = store.Connect(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// // Auto migrate the database. (Create tables if not exists)
-	// err = store.AutoMigrate(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			// Status code defaults to 500
@@ -85,9 +58,9 @@ func main() {
 			return c.Status(code).JSON(err)
 		},
 	})
+
 	// Default middleware config
 	app.Use(logger.New())
-	// app.Use(cors.New())
 
 	app.Static("/", "/public")
 	// app.All("*", func(c *fiber.Ctx) error {
@@ -102,52 +75,6 @@ func main() {
 			return fiber.NewError(http.StatusUnauthorized, err.Error())
 		},
 	}))
-
-	// api.Get("/credentials/:host", func(c *fiber.Ctx) error {
-	// 	credential, err := store.Get(c.Params("host"))
-	// 	if err != nil {
-	// 		return fiber.NewError(http.StatusNotFound, err.Error())
-	// 	}
-	// 	if credential == nil || credential.Host == "" {
-	// 		return fiber.NewError(http.StatusNotFound, "Credential not found")
-	// 	}
-	// 	return c.Status(http.StatusOK).JSON(credential)
-	// })
-
-	// api.Get("/credentials", func(c *fiber.Ctx) error {
-	// 	credentials, err := store.Remotes()
-	// 	if err != nil {
-	// 		return fiber.NewError(http.StatusInternalServerError, err.Error())
-	// 	}
-	// 	return c.Status(http.StatusOK).JSON(credentials)
-	// })
-
-	// api.Post("/credentials", func(c *fiber.Ctx) error {
-	// 	cred := new(model.Credential)
-	// 	if err := c.BodyParser(cred); err != nil {
-	// 		return fiber.NewError(http.StatusBadRequest, err.Error())
-	// 	}
-	// 	if cred.Host == "" {
-	// 		return fiber.NewError(http.StatusBadRequest, "Host is required")
-	// 	}
-	// 	if cred.User == "" {
-	// 		return fiber.NewError(http.StatusBadRequest, "User is required")
-	// 	}
-
-	// 	if err := store.Add(*cred); err != nil {
-	// 		return fiber.NewError(http.StatusInternalServerError, err.Error())
-	// 	}
-
-	// 	type response struct {
-	// 		Host string `json:"host"`
-	// 		Port int    `json:"port"`
-	// 	}
-
-	// 	return c.Status(http.StatusCreated).JSON(response{
-	// 		Host: cred.Host,
-	// 		Port: cred.Port,
-	// 	})
-	// })
 
 	log.Fatal(app.Listen(":1203"))
 }
