@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -37,13 +38,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// err = store.Init(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	defer store.Close()
+
+	err = store.Init(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// migrator := migrate.NewMigrator(db, migrations.Migrations)
 

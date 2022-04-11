@@ -24,7 +24,7 @@ func NewStore(dsn string) (*Store, error) {
 }
 
 func (store *Store) Init(ctx context.Context) error {
-	res, err := store.db.NewCreateTable().Model((*model.Remote)(nil)).Exec(ctx)
+	res, err := store.db.NewCreateTable().IfNotExists().Model((*model.Remote)(nil)).Exec(ctx)
 	if err != nil {
 		return err
 	}
