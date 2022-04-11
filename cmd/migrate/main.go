@@ -22,18 +22,6 @@ import (
 func init() {
 	godotenv.Load()
 
-	if os.Getenv("AUTH0_ISSUER") == "" {
-		log.Fatal("AUTH0_ISSUER is not set")
-	}
-
-	if os.Getenv("AUTH0_AUDIENCE") == "" {
-		log.Fatal("AUTH0_AUDIENCE is not set")
-	}
-
-	if os.Getenv("VAULT_SECRET") == "" {
-		log.Fatal("VAULT_SECRET is not set")
-	}
-
 	if os.Getenv("DATABASE_URL") == "" {
 		log.Fatal("DATABASE_URL is not set")
 	}

@@ -1,19 +1,15 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"ssh-vault/internal/middleware/auth0"
+	"ssh-vault/internal/store"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/driver/pgdriver"
-	"github.com/uptrace/bun/extra/bundebug"
 )
 
 func init() {
@@ -37,10 +33,17 @@ func init() {
 }
 
 func main() {
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(os.Getenv("DATABASE_URL"))))
-	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook())
-	bundebug.NewQueryHook(bundebug.WithVerbose(true))
+	store, err := store.NewStore(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// err = store.Init(context.Background())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	defer store.Close()
 
 	// migrator := migrate.NewMigrator(db, migrations.Migrations)
 
