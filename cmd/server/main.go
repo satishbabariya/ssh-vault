@@ -1,16 +1,19 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"ssh-vault/internal/middleware/auth0"
-	"ssh-vault/internal/store"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/uptrace/bun/extra/bundebug"
 )
 
 func init() {
@@ -34,23 +37,37 @@ func init() {
 }
 
 func main() {
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(os.Getenv("DATABASE_URL"))))
+	db := bun.NewDB(sqldb, pgdialect.New())
+	db.AddQueryHook(bundebug.NewQueryHook())
+	bundebug.NewQueryHook(bundebug.WithVerbose(true))
+
+	// migrator := migrate.NewMigrator(db, migrations.Migrations)
+
+	// group, err := migrator.Migrate(context.Background())
+	// if err == nil {
+	// 	if group.IsZero() {
+	// 		log.Printf("there are no new migrations to run (database is up to date)\n")
+	// 	}
+	// }
+
 	// Initialize the database.
-	store, err := store.NewStore(os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer store.Close()
+	// store, err := store.NewStore(os.Getenv("DATABASE_URL"))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer store.Close()
 
-	err = store.Connect(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = store.Connect(context.Background())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	// Auto migrate the database. (Create tables if not exists)
-	err = store.AutoMigrate(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
+	// // Auto migrate the database. (Create tables if not exists)
+	// err = store.AutoMigrate(context.Background())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
