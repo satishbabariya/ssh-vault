@@ -23,14 +23,36 @@ func NewStore(dsn string) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
-func (store *Store) Init(ctx context.Context) error {
-	res, err := store.db.NewCreateTable().IfNotExists().Model((*model.Remote)(nil)).Exec(ctx)
+func (store *Store) CreateTable(ctx context.Context, model interface{}) error {
+	res, err := store.db.NewCreateTable().IfNotExists().Model(model).Exec(ctx)
 	if err != nil {
 		return err
 	}
 
 	if _, err := res.RowsAffected(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (store *Store) Init(ctx context.Context) error {
+	models := []interface{}{
+		(*model.Identity)(nil),
+		(*model.Permission)(nil),
+		(*model.Remote)(nil),
+	}
+
+	// register models
+	for _, model := range models {
+		store.db.RegisterModel(model)
+	}
+
+	// create tables
+	for _, model := range models {
+		if err := store.CreateTable(ctx, model); err != nil {
+			return err
+		}
 	}
 
 	return nil

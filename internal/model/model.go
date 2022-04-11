@@ -19,10 +19,33 @@ import "time"
 
 // type Remotes []Remote
 
+type Identity struct {
+	ID         int64     `bun:"id,pk,autoincrement"`
+	CreatedAt  time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt  time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	Provider   string    `bun:"provider"`
+	ProviderID string    `bun:"provider_id,unique"`
+}
+
 type Remote struct {
-	ID        int64     `bun:"id,pk,autoincrement"`
-	Host      string    `bun:"host" validate:"required"`
-	Port      int       `bun:"port" validate:"required"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	ID          int64        `bun:"id,pk,autoincrement"`
+	Host        string       `bun:"host,unique" validate:"required"`
+	Port        int          `bun:"port" validate:"required"`
+	CreatedAt   time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt   time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	Permissions []Permission `bun:"m2m:permissions,join:Remote=Identity"`
+}
+
+type Permission struct {
+	ID          int64       `bun:"id,pk,autoincrement"`
+	Remote      *Remote     `bun:"rel:belongs-to,join:remote_id=id"`
+	RemoteID    int64       `bun:"remote_id"`
+	Identity    *Identity   `bun:"rel:belongs-to,join:identity_id=id"`
+	IdentityID  int64       `bun:"identity_id"`
+	Permissions Permissions `bun:"embed:roles_"`
+}
+
+type Permissions struct {
+	Read  bool
+	Write bool
 }
