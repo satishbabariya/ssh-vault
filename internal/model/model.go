@@ -36,6 +36,13 @@ type Remote struct {
 	Permissions []Permission `bun:"m2m:permissions,join:Remote=Identity"`
 }
 
+type Credential struct {
+	ID        int64     `bun:"id,pk,autoincrement"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	RemoteID  int64     `bun:"remote_id,notnull"`
+}
+
 type Permission struct {
 	ID          int64       `bun:"id,pk,autoincrement"`
 	Remote      *Remote     `bun:"rel:belongs-to,join:remote_id=id"`

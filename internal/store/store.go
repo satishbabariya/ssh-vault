@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"runtime"
 	"ssh-vault/internal/model"
 
 	"github.com/uptrace/bun"
@@ -16,10 +17,21 @@ type Store struct {
 }
 
 func NewStore(dsn string) (*Store, error) {
+
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	db := bun.NewDB(sqldb, pgdialect.New())
+
+	// maintains a pool of idle connections. To maximize pool performance
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	sqldb.SetMaxIdleConns(maxOpenConns)
+
+	// create db
+	db := bun.NewDB(sqldb, pgdialect.New(), bun.WithDiscardUnknownColumns())
+
+	// log queries
 	db.AddQueryHook(bundebug.NewQueryHook())
 	bundebug.NewQueryHook(bundebug.WithVerbose(true))
+
 	return &Store{db: db}, nil
 }
 
@@ -41,6 +53,7 @@ func (store *Store) Init(ctx context.Context) error {
 		(*model.Identity)(nil),
 		(*model.Permission)(nil),
 		(*model.Remote)(nil),
+		(*model.Credential)(nil),
 	}
 
 	// register models
