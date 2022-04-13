@@ -3,3 +3,25 @@ syntax = "proto3";
 package vault;
 
 option go_package = "github.com/satishbabariya/ssh-vault;proto";
+
+message Empty {
+
+}
+
+message AuthenticateRequest{
+    string token = 1;
+}
+
+message AuthenticateResponse{
+    
+}
+
+message AuthConfigResponse {
+    string github_host = 1;
+    string github_client_id = 2;
+}
+
+service AuthService {
+    rpc GetConfig(Empty) returns (AuthConfigResponse);
+    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {}
+}

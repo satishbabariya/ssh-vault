@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"ssh-vault/internal/auth"
 	"ssh-vault/internal/config"
+	"ssh-vault/internal/proto"
 	"ssh-vault/internal/store"
 
 	"github.com/sirupsen/logrus"
@@ -31,7 +33,10 @@ func main() {
 	// Create new gRPC server
 	server := grpc.NewServer()
 
+	authService := auth.NewAuthServiceServer(config, store)
+
 	// Register the services with the gRPC server.
+	proto.RegisterAuthServiceServer(server, authService)
 
 	// listen on the port
 	port := fmt.Sprintf("0.0.0.0:%s", config.Port)

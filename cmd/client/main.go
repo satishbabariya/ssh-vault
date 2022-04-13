@@ -1,121 +1,182 @@
+// package main
+
+// import (
+// 	"context"
+// 	"flag"
+// 	"fmt"
+// 	"log"
+// 	"os"
+// 	"os/signal"
+// 	"syscall"
+// 	"time"
+
+// 	"golang.org/x/crypto/ssh"
+// 	"golang.org/x/term"
+// )
+
+// var (
+// 	user     = flag.String("l", "", "login_name")
+// 	password = flag.String("pass", "", "password")
+// 	port     = flag.Int("p", 22, "port")
+// )
+
+// func main() {
+// 	flag.Parse()
+// 	if flag.NArg() == 0 {
+// 		flag.Usage()
+// 		os.Exit(2)
+// 	}
+
+// 	sig := make(chan os.Signal, 1)
+// 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
+// 	ctx, cancel := context.WithCancel(context.Background())
+
+// 	go func() {
+// 		if err := run(ctx); err != nil {
+// 			log.Print(err)
+// 		}
+// 		cancel()
+// 	}()
+
+// 	select {
+// 	case <-sig:
+// 		cancel()
+// 	case <-ctx.Done():
+// 	}
+// }
+
+// func run(ctx context.Context) error {
+// 	fmt.Println("Connecting...", *user, *password, *port)
+// 	config := &ssh.ClientConfig{
+// 		User: *user,
+// 		Auth: []ssh.AuthMethod{
+// 			ssh.Password(*password),
+// 		},
+// 		Timeout:         5 * time.Second,
+// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+// 	}
+
+// 	hostport := fmt.Sprintf("%s:%d", flag.Arg(0), *port)
+// 	conn, err := ssh.Dial("tcp", hostport, config)
+// 	if err != nil {
+// 		return fmt.Errorf("cannot connect %v: %v", hostport, err)
+// 	}
+// 	defer conn.Close()
+
+// 	session, err := conn.NewSession()
+// 	if err != nil {
+// 		return fmt.Errorf("cannot open new session: %v", err)
+// 	}
+// 	defer session.Close()
+
+// 	go func() {
+// 		<-ctx.Done()
+// 		conn.Close()
+// 	}()
+
+// 	fd := int(os.Stdin.Fd())
+// 	state, err := term.MakeRaw(fd)
+// 	if err != nil {
+// 		return fmt.Errorf("terminal make raw: %s", err)
+// 	}
+// 	defer term.Restore(fd, state)
+
+// 	w, h, err := term.GetSize(fd)
+// 	if err != nil {
+// 		return fmt.Errorf("terminal get size: %s", err)
+// 	}
+
+// 	modes := ssh.TerminalModes{
+// 		ssh.ECHO:          1,
+// 		ssh.TTY_OP_ISPEED: 14400,
+// 		ssh.TTY_OP_OSPEED: 14400,
+// 	}
+
+// 	term := os.Getenv("TERM")
+// 	if term == "" {
+// 		term = "xterm-256color"
+// 	}
+// 	if err := session.RequestPty(term, h, w, modes); err != nil {
+// 		return fmt.Errorf("session xterm: %s", err)
+// 	}
+
+// 	session.Stdout = os.Stdout
+// 	session.Stderr = os.Stderr
+// 	session.Stdin = os.Stdin
+
+// 	if err := session.Shell(); err != nil {
+// 		return fmt.Errorf("session shell: %s", err)
+// 	}
+
+// 	if err := session.Wait(); err != nil {
+// 		if e, ok := err.(*ssh.ExitError); ok {
+// 			switch e.ExitStatus() {
+// 			case 130:
+// 				return nil
+// 			}
+// 		}
+// 		return fmt.Errorf("ssh: %s", err)
+// 	}
+// 	return nil
+// }
+
 package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"ssh-vault/internal/proto"
 
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
+	"github.com/cli/oauth"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
-var (
-	user     = flag.String("l", "", "login_name")
-	password = flag.String("pass", "", "password")
-	port     = flag.Int("p", 22, "port")
-)
-
-func main() {
-	flag.Parse()
-	if flag.NArg() == 0 {
-		flag.Usage()
-		os.Exit(2)
-	}
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		if err := run(ctx); err != nil {
-			log.Print(err)
-		}
-		cancel()
-	}()
-
-	select {
-	case <-sig:
-		cancel()
-	case <-ctx.Done():
-	}
+func init() {
+	godotenv.Load()
 }
 
-func run(ctx context.Context) error {
-	fmt.Println("Connecting...", *user, *password, *port)
-	config := &ssh.ClientConfig{
-		User: *user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(*password),
+func main() {
+
+	conn, err := grpc.Dial(
+		"localhost:1203",
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		// grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
+		// grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor),
+	)
+	if err != nil {
+		logrus.Fatalf("failed to dial: %v", err)
+	}
+
+	client := proto.NewAuthServiceClient(conn)
+
+	config, err := client.GetConfig(context.Background(), &proto.Empty{})
+	if err != nil {
+		logrus.Fatalf("failed to get config: %v", err)
+	}
+
+	if config.GithubClientId == "" {
+		logrus.Fatalf("github client id is empty")
+	}
+
+	flow := &oauth.Flow{
+		Host:     oauth.GitHubHost(config.GithubHost),
+		ClientID: config.GithubClientId,
+		Scopes: []string{
+			"user:email",
 		},
-		Timeout:         5 * time.Second,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	hostport := fmt.Sprintf("%s:%d", flag.Arg(0), *port)
-	conn, err := ssh.Dial("tcp", hostport, config)
+	accessToken, err := flow.DeviceFlow()
 	if err != nil {
-		return fmt.Errorf("cannot connect %v: %v", hostport, err)
-	}
-	defer conn.Close()
-
-	session, err := conn.NewSession()
-	if err != nil {
-		return fmt.Errorf("cannot open new session: %v", err)
-	}
-	defer session.Close()
-
-	go func() {
-		<-ctx.Done()
-		conn.Close()
-	}()
-
-	fd := int(os.Stdin.Fd())
-	state, err := term.MakeRaw(fd)
-	if err != nil {
-		return fmt.Errorf("terminal make raw: %s", err)
-	}
-	defer term.Restore(fd, state)
-
-	w, h, err := term.GetSize(fd)
-	if err != nil {
-		return fmt.Errorf("terminal get size: %s", err)
+		panic(err)
 	}
 
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,
-		ssh.TTY_OP_ISPEED: 14400,
-		ssh.TTY_OP_OSPEED: 14400,
-	}
+	fmt.Printf("Access token: %s\n", accessToken.Token)
 
-	term := os.Getenv("TERM")
-	if term == "" {
-		term = "xterm-256color"
-	}
-	if err := session.RequestPty(term, h, w, modes); err != nil {
-		return fmt.Errorf("session xterm: %s", err)
-	}
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
-
-	if err := session.Shell(); err != nil {
-		return fmt.Errorf("session shell: %s", err)
-	}
-
-	if err := session.Wait(); err != nil {
-		if e, ok := err.(*ssh.ExitError); ok {
-			switch e.ExitStatus() {
-			case 130:
-				return nil
-			}
-		}
-		return fmt.Errorf("ssh: %s", err)
-	}
-	return nil
+	client.Authenticate(context.Background(), &proto.AuthenticateRequest{
+		Token: accessToken.Token,
+	})
 }
