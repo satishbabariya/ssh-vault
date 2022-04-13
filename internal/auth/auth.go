@@ -2,14 +2,17 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"ssh-vault/internal/config"
 	"ssh-vault/internal/proto"
 	"ssh-vault/internal/store"
+	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/golang-jwt/jwt"
+	"github.com/google/go-github/v43/github"
 )
 
 type AuthServiceServer struct {
@@ -41,26 +44,40 @@ func (s *AuthServiceServer) Authenticate(ctx context.Context, in *proto.Authenti
 	req, err := http.NewRequest(method, url, nil)
 
 	if err != nil {
-		logrus.Error(err)
 		return nil, err
 	}
-	req.Header.Add("Authorization", "token "+in.Token)
 
 	res, err := client.Do(req)
 	if err != nil {
-		logrus.Error(err)
 		return nil, err
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		logrus.Error(err)
 		return nil, err
 	}
-	fmt.Println(string(body))
 
-	logrus.Println(res)
+	var user github.User
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	t := jwt.New(jwt.GetSigningMethod("HS256"))
+	t.Claims = jwt.MapClaims{
+		"iss": user.GetLogin(),
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	token, err := t.SignedString(
+		[]byte(s.config.VaultSecret),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.AuthenticateResponse{
+		Token: token,
+	}, nil
 }

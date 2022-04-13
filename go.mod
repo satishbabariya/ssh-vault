@@ -7,21 +7,28 @@ require (
 	github.com/caarlos0/env/v6 v6.9.1
 	github.com/cli/oauth v0.9.0
 	github.com/gofiber/fiber/v2 v2.31.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/google/go-github/v43 v43.0.0
 	github.com/joho/godotenv v1.4.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/uptrace/bun/driver/pgdriver v1.1.3
 	github.com/uptrace/bun/extra/bundebug v1.1.3
 	github.com/urfave/cli/v2 v2.4.0
+	github.com/zalando/go-keyring v0.2.1
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 )
 
 require (
+	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/cli/browser v1.0.0 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/danieljoos/wincred v1.1.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

@@ -13,7 +13,7 @@ message AuthenticateRequest{
 }
 
 message AuthenticateResponse{
-    
+    string token = 1;
 }
 
 message AuthConfigResponse {

@@ -126,15 +126,23 @@ import (
 	"context"
 	"fmt"
 	"ssh-vault/internal/proto"
+	"time"
 
 	"github.com/cli/oauth"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"github.com/zalando/go-keyring"
 	"google.golang.org/grpc"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func init() {
 	godotenv.Load()
+}
+
+type VaultClient struct {
+	conn   *grpc.ClientConn
+	client proto.AuthServiceClient
 }
 
 func main() {
@@ -152,13 +160,69 @@ func main() {
 
 	client := proto.NewAuthServiceClient(conn)
 
-	config, err := client.GetConfig(context.Background(), &proto.Empty{})
+	vault := &VaultClient{
+		conn:   conn,
+		client: client,
+	}
+
+	token, err := keyring.Get("vault", "token")
 	if err != nil {
-		logrus.Fatalf("failed to get config: %v", err)
+		t, err := vault.Login()
+		if err != nil {
+			logrus.Fatalf("failed to login: %v", err)
+		}
+		token = *t
+	}
+
+	t, err := jwt.ParseSigned(token)
+	if err != nil {
+		logrus.Fatalf("failed to parse token: %v", err)
+	}
+
+	var claims jwt.Claims
+
+	err = t.UnsafeClaimsWithoutVerification(&claims)
+	if err != nil {
+		logrus.Fatalf("failed to parse token: %v", err)
+	}
+
+	// check if token is expired
+	if claims.Expiry.Time().Before(time.Now()) {
+		t, err := vault.Login()
+		if err != nil {
+			logrus.Fatalf("failed to login: %v", err)
+		}
+		token = *t
+	}
+
+	fmt.Println(token)
+}
+
+func (v *VaultClient) Login() (*string, error) {
+	t, err := v.Authenticate(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to store token: %v", err)
+	}
+
+	err = keyring.Set(
+		"vault", "token", *t,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to store token: %v", err)
+	}
+
+	return t, nil
+}
+
+func (v *VaultClient) Authenticate(ctx context.Context) (*string, error) {
+	config, err := v.client.GetConfig(ctx, &proto.Empty{})
+	if err != nil {
+		return nil, err
 	}
 
 	if config.GithubClientId == "" {
-		logrus.Fatalf("github client id is empty")
+		return nil, fmt.Errorf("github client id is empty")
 	}
 
 	flow := &oauth.Flow{
@@ -171,12 +235,20 @@ func main() {
 
 	accessToken, err := flow.DeviceFlow()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	fmt.Printf("Access token: %s\n", accessToken.Token)
-
-	client.Authenticate(context.Background(), &proto.AuthenticateRequest{
+	resp, err := v.client.Authenticate(context.Background(), &proto.AuthenticateRequest{
 		Token: accessToken.Token,
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("authenticate response is nil")
+	}
+
+	return &resp.Token, nil
 }
