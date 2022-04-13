@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+package vault;
+
+option go_package = "github.com/satishbabariya/ssh-vault;proto";
