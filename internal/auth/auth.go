@@ -77,6 +77,18 @@ func (s *AuthServiceServer) Authenticate(ctx context.Context, in *proto.Authenti
 		return nil, err
 	}
 
+	exist, err := s.store.IdentityExists(ctx, user.GetLogin())
+	if err != nil {
+		return nil, err
+	}
+
+	if !exist {
+		err = s.store.CreateIdentity(ctx, user.GetLogin())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &proto.AuthenticateResponse{
 		Token: token,
 	}, nil
