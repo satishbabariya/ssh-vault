@@ -125,14 +125,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"ssh-vault/internal/proto"
 	"time"
 
 	"github.com/cli/oauth"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -146,60 +149,105 @@ type VaultClient struct {
 }
 
 func main() {
-
-	conn, err := grpc.Dial(
-		"localhost:1203",
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		// grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
-		// grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor),
-	)
-	if err != nil {
-		logrus.Fatalf("failed to dial: %v", err)
+	app := &cli.App{
+		Name:        "sshv",
+		Usage:       "SSH Vault",
+		Description: `SSH Vault is a tool for managing SSH keys.`,
 	}
 
-	client := proto.NewAuthServiceClient(conn)
+	app.Commands = []*cli.Command{
+		{
+			Name:  "login",
+			Usage: `Login to SSH Vault`,
+			Action: func(c *cli.Context) error {
+				ctx, cancel := context.WithTimeout(c.Context, 30*time.Second)
+				defer cancel()
 
-	vault := &VaultClient{
-		conn:   conn,
-		client: client,
+				conn, err := grpc.Dial(
+					"localhost:1203",
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+					// grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
+					// grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor),
+				)
+				if err != nil {
+					return err
+				}
+
+				client := proto.NewAuthServiceClient(conn)
+
+				vault := &VaultClient{
+					conn:   conn,
+					client: client,
+				}
+
+				token, err := keyring.Get("vault", "token")
+				if err != nil {
+					t, err := vault.Login(ctx)
+					if err != nil {
+						return err
+					}
+					token = *t
+				}
+
+				t, err := jwt.ParseSigned(token)
+				if err != nil {
+					return err
+				}
+
+				var claims jwt.Claims
+
+				err = t.UnsafeClaimsWithoutVerification(&claims)
+				if err != nil {
+					return err
+				}
+
+				// check if token is expired
+				if claims.Expiry.Time().Before(time.Now()) {
+					t, err := vault.Login(ctx)
+					if err != nil {
+						return err
+					}
+					token = *t
+				}
+
+				fmt.Println(token)
+
+				return conn.Close()
+			},
+		},
+		{
+			Name:  "list",
+			Usage: `List all SSH Vault remote hosts`,
+			Action: func(c *cli.Context) error {
+
+				interceptor := ClientInterceptor{}
+
+				conn, err := grpc.Dial(
+					"localhost:1203",
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+					grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
+				)
+				if err != nil {
+					return err
+				}
+
+				return conn.Close()
+			},
+		},
 	}
 
-	token, err := keyring.Get("vault", "token")
-	if err != nil {
-		t, err := vault.Login()
-		if err != nil {
-			logrus.Fatalf("failed to login: %v", err)
-		}
-		token = *t
+	// Run the app.
+	if err := app.Run(os.Args); err != nil {
+		// Log the error and exit.
+		logrus.Errorln(err)
 	}
 
-	t, err := jwt.ParseSigned(token)
-	if err != nil {
-		logrus.Fatalf("failed to parse token: %v", err)
-	}
-
-	var claims jwt.Claims
-
-	err = t.UnsafeClaimsWithoutVerification(&claims)
-	if err != nil {
-		logrus.Fatalf("failed to parse token: %v", err)
-	}
-
-	// check if token is expired
-	if claims.Expiry.Time().Before(time.Now()) {
-		t, err := vault.Login()
-		if err != nil {
-			logrus.Fatalf("failed to login: %v", err)
-		}
-		token = *t
-	}
-
-	fmt.Println(token)
 }
 
-func (v *VaultClient) Login() (*string, error) {
-	t, err := v.Authenticate(context.Background())
+func (v *VaultClient) Login(ctx context.Context) (*string, error) {
+	t, err := v.AuthenticateWithGithub(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store token: %v", err)
 	}
@@ -215,7 +263,7 @@ func (v *VaultClient) Login() (*string, error) {
 	return t, nil
 }
 
-func (v *VaultClient) Authenticate(ctx context.Context) (*string, error) {
+func (v *VaultClient) AuthenticateWithGithub(ctx context.Context) (*string, error) {
 	config, err := v.client.GetConfig(ctx, &proto.Empty{})
 	if err != nil {
 		return nil, err
@@ -238,7 +286,7 @@ func (v *VaultClient) Authenticate(ctx context.Context) (*string, error) {
 		return nil, err
 	}
 
-	resp, err := v.client.Authenticate(context.Background(), &proto.AuthenticateRequest{
+	resp, err := v.client.Authenticate(ctx, &proto.AuthenticateRequest{
 		Token: accessToken.Token,
 	})
 
@@ -251,4 +299,23 @@ func (v *VaultClient) Authenticate(ctx context.Context) (*string, error) {
 	}
 
 	return &resp.Token, nil
+}
+
+// ClientInterceptor is a gRPC interceptor that adds the access token to the request
+type ClientInterceptor struct {
+	accessToken string
+}
+
+// UnaryClientInterceptor is a gRPC interceptor that adds the access token to the request
+func (interceptor *ClientInterceptor) UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.New(nil)
+	}
+
+	md.Set("authorization", interceptor.accessToken)
+
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	return invoker(ctx, method, req, reply, cc, opts...)
 }

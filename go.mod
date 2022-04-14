@@ -13,6 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/uptrace/bun/driver/pgdriver v1.1.3
 	github.com/uptrace/bun/extra/bundebug v1.1.3
+	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.4.0
 	github.com/zalando/go-keyring v0.2.1
 	google.golang.org/grpc v1.45.0
@@ -53,6 +54,6 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886 // indirect
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0
 	mellium.im/sasl v0.2.1 // indirect
 )
