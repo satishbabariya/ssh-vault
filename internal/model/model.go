@@ -20,11 +20,10 @@ import "time"
 // type Remotes []Remote
 
 type Identity struct {
-	ID         int64     `bun:"id,pk,autoincrement"`
-	CreatedAt  time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt  time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
-	Provider   string    `bun:"provider"`
-	ProviderID string    `bun:"provider_id,unique"`
+	ID        int64     `bun:"id,pk,autoincrement"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	GithubID  string    `bun:"github_id,unique" validate:"required"`
 }
 
 type Remote struct {

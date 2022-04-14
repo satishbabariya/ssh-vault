@@ -74,8 +74,8 @@ func (store *Store) Close() error {
 	return store.db.Close()
 }
 
-func (store *Store) IdentityExists(ctx context.Context, provider_id string) (bool, error) {
-	exists, err := store.db.NewSelect().Model((*model.Identity)(nil)).Where("provider_id = ?", provider_id).Exists(ctx)
+func (store *Store) IdentityExists(ctx context.Context, github_id string) (bool, error) {
+	exists, err := store.db.NewSelect().Model((*model.Identity)(nil)).Where("github_id = ?", github_id).Exists(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -83,10 +83,9 @@ func (store *Store) IdentityExists(ctx context.Context, provider_id string) (boo
 	return exists, nil
 }
 
-func (store *Store) CreateIdentity(ctx context.Context, provider_id string) error {
+func (store *Store) CreateIdentity(ctx context.Context, github_id string) error {
 	identity := &model.Identity{
-		Provider:   "github",
-		ProviderID: provider_id,
+		GithubID: github_id,
 	}
 	_, err := store.db.NewInsert().Model(identity).Exec(ctx)
 	if err != nil {

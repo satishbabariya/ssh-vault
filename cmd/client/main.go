@@ -167,8 +167,6 @@ func main() {
 					"localhost:1203",
 					grpc.WithInsecure(),
 					grpc.WithBlock(),
-					// grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
-					// grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor),
 				)
 				if err != nil {
 					return err
@@ -214,6 +212,13 @@ func main() {
 				fmt.Println(token)
 
 				return conn.Close()
+			},
+		},
+		{
+			Name:  "logout",
+			Usage: `Logout from SSH Vault`,
+			Action: func(c *cli.Context) error {
+				return keyring.Delete("vault", "token")
 			},
 		},
 		{

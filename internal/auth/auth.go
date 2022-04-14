@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"ssh-vault/internal/config"
 	"ssh-vault/internal/proto"
@@ -37,31 +35,33 @@ func (s *AuthServiceServer) GetConfig(context.Context, *proto.Empty) (*proto.Aut
 }
 
 func (s *AuthServiceServer) Authenticate(ctx context.Context, in *proto.AuthenticateRequest) (*proto.AuthenticateResponse, error) {
+
 	url := "https://api.github.com/user"
 	method := "GET"
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
-
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("Authorization", "token "+in.Token)
 
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
+	gh := github.NewClient(client)
 
 	var user github.User
-	err = json.Unmarshal(body, &user)
+
+	res, err := gh.Do(ctx, req, &user)
+
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to authenticate: %v", res.StatusCode)
+	}
+
+	if user.GetLogin() == "" {
+		return nil, fmt.Errorf("github login is empty")
 	}
 
 	t := jwt.New(jwt.GetSigningMethod("HS256"))
