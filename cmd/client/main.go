@@ -126,17 +126,17 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"ssh-vault/internal/proto"
+	"ssh-vault/pkg/server/gen"
 	"time"
 
 	"github.com/cli/oauth"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func init() {
@@ -145,7 +145,7 @@ func init() {
 
 type VaultClient struct {
 	conn   *grpc.ClientConn
-	client proto.AuthServiceClient
+	client gen.VaultClient
 }
 
 func main() {
@@ -172,7 +172,7 @@ func main() {
 					return err
 				}
 
-				client := proto.NewAuthServiceClient(conn)
+				client := gen.NewVaultClient(conn)
 
 				vault := &VaultClient{
 					conn:   conn,
@@ -181,27 +181,6 @@ func main() {
 
 				token, err := keyring.Get("vault", "token")
 				if err != nil {
-					t, err := vault.Login(ctx)
-					if err != nil {
-						return err
-					}
-					token = *t
-				}
-
-				t, err := jwt.ParseSigned(token)
-				if err != nil {
-					return err
-				}
-
-				var claims jwt.Claims
-
-				err = t.UnsafeClaimsWithoutVerification(&claims)
-				if err != nil {
-					return err
-				}
-
-				// check if token is expired
-				if claims.Expiry.Time().Before(time.Now()) {
 					t, err := vault.Login(ctx)
 					if err != nil {
 						return err
@@ -269,7 +248,7 @@ func (v *VaultClient) Login(ctx context.Context) (*string, error) {
 }
 
 func (v *VaultClient) AuthenticateWithGithub(ctx context.Context) (*string, error) {
-	config, err := v.client.GetConfig(ctx, &proto.Empty{})
+	config, err := v.client.GetConfig(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -291,19 +270,7 @@ func (v *VaultClient) AuthenticateWithGithub(ctx context.Context) (*string, erro
 		return nil, err
 	}
 
-	resp, err := v.client.Authenticate(ctx, &proto.AuthenticateRequest{
-		Token: accessToken.Token,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if resp == nil {
-		return nil, fmt.Errorf("authenticate response is nil")
-	}
-
-	return &resp.Token, nil
+	return &accessToken.Token, nil
 }
 
 // ClientInterceptor is a gRPC interceptor that adds the access token to the request

@@ -2,26 +2,18 @@ syntax = "proto3";
 
 package vault;
 
-option go_package = "github.com/satishbabariya/ssh-vault;proto";
+import "google/protobuf/empty.proto";
+// import "google/protobuf/timestamp.proto";
+// import "google/rpc/status.proto";
 
-message Empty {
+option go_package = "pkg/server/gen";
 
-}
 
-message AuthenticateRequest{
-    string token = 1;
-}
-
-message AuthenticateResponse{
-    string token = 1;
+service Vault {
+    rpc GetConfig(google.protobuf.Empty) returns (AuthConfigResponse);
 }
 
 message AuthConfigResponse {
     string github_host = 1;
     string github_client_id = 2;
-}
-
-service AuthService {
-    rpc GetConfig(Empty) returns (AuthConfigResponse);
-    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {}
 }

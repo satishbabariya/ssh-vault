@@ -23,9 +23,7 @@ package interceptor
 import (
 	"context"
 	"fmt"
-	"ssh-vault/internal/config"
-
-	"github.com/golang-jwt/jwt"
+	"ssh-vault/pkg/server/config"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -71,22 +69,43 @@ func (interceptor *Interceptor) authorize(ctx context.Context, method string, pa
 
 	accessToken := values[0]
 
-	token, err := jwt.Parse(accessToken, interceptor.keyFunc)
+	fmt.Println("accessToken: ", accessToken)
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println("claims: ", claims)
-		// set claims in metadata
-		// md.Set("claims", claims)
-	} else {
-		return status.Errorf(codes.Unauthenticated, "access token is invalid: %v", err)
-	}
+	return status.Errorf(codes.Unauthenticated, "authorization token is not provided")
 
 	return nil
 }
 
-func (interceptor *Interceptor) keyFunc(token *jwt.Token) (interface{}, error) {
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "unexpected signing method: %v", token.Header["alg"])
+// TODO:
+// - Add authorization token validation
+/*
+
+url := "https://api.github.com/user"
+	method := "GET"
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
 	}
-	return []byte(interceptor.config.VaultSecret), nil
-}
+	req.Header.Add("Authorization", "token "+in.Token)
+
+	gh := github.NewClient(client)
+
+	var user github.User
+
+	res, err := gh.Do(ctx, req, &user)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to authenticate: %v", res.StatusCode)
+	}
+
+	if user.GetLogin() == "" {
+		return nil, fmt.Errorf("github login is empty")
+	}
+
+*/

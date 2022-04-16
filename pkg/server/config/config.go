@@ -1,6 +1,9 @@
 package config
 
-import "github.com/caarlos0/env/v6"
+import (
+	"github.com/caarlos0/env/v6"
+	"github.com/joho/godotenv"
+)
 
 type Config struct {
 	VaultSecret    string `env:"VAULT_SECRET,required"`
@@ -11,8 +14,13 @@ type Config struct {
 }
 
 func NewConfig() (*Config, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return nil, err
+	}
+
 	var config Config
-	err := env.Parse(&config)
+	err = env.Parse(&config)
 	if err != nil {
 		return nil, err
 	}

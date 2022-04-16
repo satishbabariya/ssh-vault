@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"runtime"
-	"ssh-vault/internal/model"
+	"ssh-vault/pkg/server/model"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
