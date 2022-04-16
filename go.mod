@@ -1,4 +1,4 @@
-module ssh-vault
+module github.com/satishbabariya/vault
 
 go 1.18
 

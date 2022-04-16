@@ -3,7 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"ssh-vault/pkg/server/gen"
+
+	"github.com/satishbabariya/vault/pkg/server/gen"
 
 	"github.com/cli/oauth"
 	"github.com/golang/protobuf/ptypes/empty"

@@ -126,9 +126,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"ssh-vault/pkg/client"
-	"ssh-vault/pkg/client/interceptor"
 	"time"
+
+	"github.com/satishbabariya/vault/pkg/client"
+	"github.com/satishbabariya/vault/pkg/client/interceptor"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"

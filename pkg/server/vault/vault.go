@@ -2,9 +2,10 @@ package vault
 
 import (
 	"context"
-	"ssh-vault/pkg/server/config"
-	"ssh-vault/pkg/server/gen"
-	"ssh-vault/pkg/server/store"
+
+	"github.com/satishbabariya/vault/pkg/server/config"
+	"github.com/satishbabariya/vault/pkg/server/gen"
+	"github.com/satishbabariya/vault/pkg/server/store"
 
 	"github.com/golang/protobuf/ptypes/empty"
 )

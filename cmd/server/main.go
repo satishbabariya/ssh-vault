@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"ssh-vault/pkg/server/config"
-	"ssh-vault/pkg/server/gen"
-	"ssh-vault/pkg/server/interceptor"
-	"ssh-vault/pkg/server/store"
-	"ssh-vault/pkg/server/vault"
+
+	"github.com/satishbabariya/vault/pkg/server/config"
+	"github.com/satishbabariya/vault/pkg/server/gen"
+	"github.com/satishbabariya/vault/pkg/server/interceptor"
+	"github.com/satishbabariya/vault/pkg/server/store"
+	"github.com/satishbabariya/vault/pkg/server/vault"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

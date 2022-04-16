@@ -23,7 +23,8 @@ package interceptor
 import (
 	"context"
 	"fmt"
-	"ssh-vault/pkg/server/config"
+
+	"github.com/satishbabariya/vault/pkg/server/config"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
