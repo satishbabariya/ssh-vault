@@ -126,27 +126,15 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"ssh-vault/pkg/server/gen"
+	"ssh-vault/pkg/client"
+	"ssh-vault/pkg/client/interceptor"
 	"time"
 
-	"github.com/cli/oauth"
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
-
-func init() {
-	godotenv.Load()
-}
-
-type VaultClient struct {
-	conn   *grpc.ClientConn
-	client gen.VaultClient
-}
 
 func main() {
 	app := &cli.App{
@@ -172,12 +160,7 @@ func main() {
 					return err
 				}
 
-				client := gen.NewVaultClient(conn)
-
-				vault := &VaultClient{
-					conn:   conn,
-					client: client,
-				}
+				vault := client.NewVaultClient(conn)
 
 				token, err := keyring.Get("vault", "token")
 				if err != nil {
@@ -205,7 +188,7 @@ func main() {
 			Usage: `List all SSH Vault remote hosts`,
 			Action: func(c *cli.Context) error {
 
-				interceptor := ClientInterceptor{}
+				interceptor := interceptor.ClientInterceptor{}
 
 				conn, err := grpc.Dial(
 					"localhost:1203",
@@ -228,66 +211,4 @@ func main() {
 		logrus.Errorln(err)
 	}
 
-}
-
-func (v *VaultClient) Login(ctx context.Context) (*string, error) {
-	t, err := v.AuthenticateWithGithub(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store token: %v", err)
-	}
-
-	err = keyring.Set(
-		"vault", "token", *t,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to store token: %v", err)
-	}
-
-	return t, nil
-}
-
-func (v *VaultClient) AuthenticateWithGithub(ctx context.Context) (*string, error) {
-	config, err := v.client.GetConfig(ctx, &empty.Empty{})
-	if err != nil {
-		return nil, err
-	}
-
-	if config.GithubClientId == "" {
-		return nil, fmt.Errorf("github client id is empty")
-	}
-
-	flow := &oauth.Flow{
-		Host:     oauth.GitHubHost(config.GithubHost),
-		ClientID: config.GithubClientId,
-		Scopes: []string{
-			"user:email",
-		},
-	}
-
-	accessToken, err := flow.DeviceFlow()
-	if err != nil {
-		return nil, err
-	}
-
-	return &accessToken.Token, nil
-}
-
-// ClientInterceptor is a gRPC interceptor that adds the access token to the request
-type ClientInterceptor struct {
-	accessToken string
-}
-
-// UnaryClientInterceptor is a gRPC interceptor that adds the access token to the request
-func (interceptor *ClientInterceptor) UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		md = metadata.New(nil)
-	}
-
-	md.Set("authorization", interceptor.accessToken)
-
-	ctx = metadata.NewOutgoingContext(ctx, md)
-
-	return invoker(ctx, method, req, reply, cc, opts...)
 }
