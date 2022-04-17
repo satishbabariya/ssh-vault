@@ -22,7 +22,7 @@ func main() {
 	}
 
 	// Create a new store
-	store, err := store.NewStore(config.DatabaseURL)
+	store, err := store.NewStore(config.Database, config.DatabaseURL)
 	if err != nil {
 		logrus.Fatal(err)
 	}

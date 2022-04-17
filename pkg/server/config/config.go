@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	VaultSecret    string `env:"VAULT_SECRET,required"`
+	Database       string `env:"DATABASE" envDefault:"postgres"`
 	DatabaseURL    string `env:"DATABASE_URL,required"`
 	Port           string `env:"PORT" envDefault:"1203"`
 	GitHubHost     string `env:"GITHUB_HOST" envDefault:"https://github.com"`
@@ -14,13 +15,10 @@ type Config struct {
 }
 
 func NewConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
-	}
+	_ = godotenv.Load()
 
 	var config Config
-	err = env.Parse(&config)
+	err := env.Parse(&config)
 	if err != nil {
 		return nil, err
 	}

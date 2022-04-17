@@ -10,6 +10,8 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/uptrace/bun/dialect/mysqldialect v1.1.3
+	github.com/uptrace/bun/dialect/pgdialect v1.1.3
+	github.com/uptrace/bun/driver/pgdriver v1.1.3
 	github.com/urfave/cli/v2 v2.4.0
 	github.com/zalando/go-keyring v0.2.1
 	google.golang.org/grpc v1.45.0
@@ -32,6 +34,7 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	mellium.im/sasl v0.2.1 // indirect
 )
 
 require (
