@@ -123,18 +123,13 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"os"
-	"time"
 
 	"github.com/satishbabariya/vault/pkg/client"
-	"github.com/satishbabariya/vault/pkg/client/interceptor"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -149,32 +144,17 @@ func main() {
 			Name:  "login",
 			Usage: `Login to SSH Vault`,
 			Action: func(c *cli.Context) error {
-				ctx, cancel := context.WithTimeout(c.Context, 30*time.Second)
-				defer cancel()
-
-				conn, err := grpc.Dial(
-					"localhost:1203",
-					grpc.WithInsecure(),
-					grpc.WithBlock(),
-				)
+				vault, err := client.NewClientUnsafe(c.Context)
 				if err != nil {
 					return err
 				}
 
-				vault := client.NewVaultClient(conn)
-
-				token, err := keyring.Get("vault", "token")
+				err = vault.Login(c.Context)
 				if err != nil {
-					t, err := vault.Login(ctx)
-					if err != nil {
-						return err
-					}
-					token = *t
+					return err
 				}
 
-				fmt.Println(token)
-
-				return conn.Close()
+				return vault.Close()
 			},
 		},
 		{
@@ -188,20 +168,12 @@ func main() {
 			Name:  "list",
 			Usage: `List all SSH Vault remote hosts`,
 			Action: func(c *cli.Context) error {
-
-				interceptor := interceptor.ClientInterceptor{}
-
-				conn, err := grpc.Dial(
-					"localhost:1203",
-					grpc.WithInsecure(),
-					grpc.WithBlock(),
-					grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor),
-				)
+				vault, err := client.NewClient(c.Context)
 				if err != nil {
 					return err
 				}
 
-				return conn.Close()
+				return vault.Close()
 			},
 		},
 	}

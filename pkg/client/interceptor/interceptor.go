@@ -12,6 +12,10 @@ type ClientInterceptor struct {
 	accessToken string
 }
 
+func NewClientInterceptor(accessToken string) *ClientInterceptor {
+	return &ClientInterceptor{accessToken: accessToken}
+}
+
 // UnaryClientInterceptor is a gRPC interceptor that adds the access token to the request
 func (interceptor *ClientInterceptor) UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	md, ok := metadata.FromIncomingContext(ctx)

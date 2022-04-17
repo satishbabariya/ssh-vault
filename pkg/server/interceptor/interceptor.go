@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/satishbabariya/vault/pkg/server/config"
+	"github.com/satishbabariya/vault/pkg/server/gh"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,13 +34,22 @@ import (
 )
 
 type Interceptor struct {
-	config *config.Config
+	config        *config.Config
+	PublicMethods map[string]bool
 }
 
 func NewInterceptor(config *config.Config) *Interceptor {
 	return &Interceptor{
 		config: config,
+		PublicMethods: map[string]bool{
+			"/vault.Vault/GetConfig": true,
+		},
 	}
+}
+
+func (interceptor *Interceptor) IsPublic(method string) bool {
+	_, ok := interceptor.PublicMethods[method]
+	return ok
 }
 
 func (interceptor *Interceptor) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -59,6 +69,11 @@ func (interceptor *Interceptor) StreamInterceptor(srv interface{}, stream grpc.S
 }
 
 func (interceptor *Interceptor) authorize(ctx context.Context, method string, payload interface{}) error {
+
+	if interceptor.IsPublic(method) {
+		return nil
+	}
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return status.Errorf(codes.Unauthenticated, "metadata is not provided")
@@ -72,41 +87,12 @@ func (interceptor *Interceptor) authorize(ctx context.Context, method string, pa
 
 	fmt.Println("accessToken: ", accessToken)
 
-	return status.Errorf(codes.Unauthenticated, "authorization token is not provided")
+	gh_user, err := gh.GetGithubUserFromToken(accessToken)
+	if err != nil {
+		return status.Errorf(codes.Unauthenticated, "invalid access token")
+	}
+
+	ctx = context.WithValue(ctx, "gh_user", gh_user)
 
 	return nil
 }
-
-// TODO:
-// - Add authorization token validation
-/*
-
-url := "https://api.github.com/user"
-	method := "GET"
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Authorization", "token "+in.Token)
-
-	gh := github.NewClient(client)
-
-	var user github.User
-
-	res, err := gh.Do(ctx, req, &user)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to authenticate: %v", res.StatusCode)
-	}
-
-	if user.GetLogin() == "" {
-		return nil, fmt.Errorf("github login is empty")
-	}
-
-*/

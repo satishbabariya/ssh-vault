@@ -7,6 +7,7 @@ type Identity struct {
 	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 	GithubID  string    `bun:"github_id,unique" validate:"required"`
+	Name      *string   `bun:"name"`
 }
 
 type Remote struct {
