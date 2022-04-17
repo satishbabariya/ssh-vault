@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"runtime"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/satishbabariya/vault/pkg/server/model"
-
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/driver/pgdriver"
-	"github.com/uptrace/bun/extra/bundebug"
+	"github.com/uptrace/bun/dialect/mysqldialect"
 )
 
 type Store struct {
@@ -18,19 +16,22 @@ type Store struct {
 }
 
 func NewStore(dsn string) (*Store, error) {
-	// Open a PostgreSQL database.
-	pgdb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	// Open a MySQL database.
+	sqldb, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
 
 	// maintains a pool of idle connections. To maximize pool performance
 	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
-	pgdb.SetMaxOpenConns(maxOpenConns)
-	pgdb.SetMaxIdleConns(maxOpenConns)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	sqldb.SetMaxIdleConns(maxOpenConns)
 
 	// create db
-	db := bun.NewDB(pgdb, pgdialect.New(), bun.WithDiscardUnknownColumns())
+	db := bun.NewDB(sqldb, mysqldialect.New())
 
 	// Print all queries to stdout.
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	return &Store{db: db}, nil
 }

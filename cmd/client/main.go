@@ -126,13 +126,13 @@ import (
 	"os"
 
 	"github.com/satishbabariya/vault/pkg/client"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
 )
 
 func main() {
+
 	app := &cli.App{
 		Name:        "sshv",
 		Usage:       "SSH Vault",
@@ -144,7 +144,7 @@ func main() {
 			Name:  "login",
 			Usage: `Login to SSH Vault`,
 			Action: func(c *cli.Context) error {
-				vault, err := client.NewClientUnsafe(c.Context)
+				vault, err := client.NewClientUnsafe(c.Context, "http://localhost:1203")
 				if err != nil {
 					return err
 				}
@@ -154,7 +154,7 @@ func main() {
 					return err
 				}
 
-				return vault.Close()
+				return nil
 			},
 		},
 		{
@@ -168,12 +168,14 @@ func main() {
 			Name:  "list",
 			Usage: `List all SSH Vault remote hosts`,
 			Action: func(c *cli.Context) error {
-				vault, err := client.NewClient(c.Context)
+				vault, err := client.NewClient(c.Context, "http://localhost:1203")
 				if err != nil {
 					return err
 				}
 
-				return vault.Close()
+				logrus.Info("Listing SSH Vault remote hosts", vault)
+
+				return nil
 			},
 		},
 	}
@@ -183,5 +185,4 @@ func main() {
 		// Log the error and exit.
 		logrus.Errorln(err)
 	}
-
 }

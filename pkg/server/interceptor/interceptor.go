@@ -25,11 +25,9 @@ import (
 
 	"github.com/satishbabariya/vault/pkg/server/config"
 	"github.com/satishbabariya/vault/pkg/server/gh"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
+	"github.com/sirupsen/logrus"
+	"github.com/twitchtv/twirp"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 type Interceptor struct {
@@ -41,30 +39,40 @@ func NewInterceptor(config *config.Config) *Interceptor {
 	return &Interceptor{
 		config: config,
 		PublicMethods: map[string]bool{
-			"/vault.Vault/GetConfig": true,
+			// "/vault.Vault/GetConfig": true,
+			"Vault/GetConfig": true,
 		},
 	}
 }
 
 func (interceptor *Interceptor) IsPublic(method string) bool {
+	logrus.Info("method: ", method)
 	_, ok := interceptor.PublicMethods[method]
 	return ok
 }
 
-func (interceptor *Interceptor) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	err := interceptor.authorize(ctx, info.FullMethod, req)
-	if err != nil {
-		return nil, err
-	}
-	return handler(ctx, req)
-}
+func (interceptor *Interceptor) NewVaultInterceptor() twirp.Interceptor {
+	return func(next twirp.Method) twirp.Method {
+		return func(ctx context.Context, req interface{}) (interface{}, error) {
+			service, ok := twirp.ServiceName(ctx)
+			if !ok {
+				return nil, twirp.NewError(twirp.Unauthenticated, "service name not found")
+			}
 
-func (interceptor *Interceptor) StreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	err := interceptor.authorize(stream.Context(), info.FullMethod, srv)
-	if err != nil {
-		return err
+			method, ok := twirp.MethodName(ctx)
+			if !ok {
+				return nil, twirp.NewError(twirp.BadRoute, "method not found")
+			}
+
+			fullMethod := service + "/" + method
+
+			err := interceptor.authorize(ctx, fullMethod, req)
+			if err != nil {
+				return nil, err
+			}
+			return next(ctx, req)
+		}
 	}
-	return handler(srv, stream)
 }
 
 func (interceptor *Interceptor) authorize(ctx context.Context, method string, payload interface{}) error {
@@ -75,18 +83,18 @@ func (interceptor *Interceptor) authorize(ctx context.Context, method string, pa
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return status.Errorf(codes.Unauthenticated, "metadata is not provided")
+		return twirp.NewError(twirp.Unauthenticated, "metadata is not provided")
 	}
 	values := md["authorization"]
 	if len(values) == 0 {
-		return status.Errorf(codes.Unauthenticated, "authorization token is not provided")
+		return twirp.NewError(twirp.Unauthenticated, "authorization token is not provided")
 	}
 
 	accessToken := values[0]
 
 	gh_user, err := gh.GetGithubUserFromToken(ctx, accessToken)
 	if err != nil {
-		return status.Errorf(codes.Unauthenticated, "invalid access token")
+		return twirp.NewError(twirp.Unauthenticated, "invalid access token")
 	}
 
 	ctx = context.WithValue(ctx, "gh_user", gh_user)

@@ -3,7 +3,7 @@ package interceptor
 import (
 	"context"
 
-	"google.golang.org/grpc"
+	"github.com/twitchtv/twirp"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -16,16 +16,18 @@ func NewClientInterceptor(accessToken string) *ClientInterceptor {
 	return &ClientInterceptor{accessToken: accessToken}
 }
 
-// UnaryClientInterceptor is a gRPC interceptor that adds the access token to the request
-func (interceptor *ClientInterceptor) UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		md = metadata.New(nil)
+func (interceptor *ClientInterceptor) AuthInterceptor() twirp.Interceptor {
+	return func(next twirp.Method) twirp.Method {
+		return func(ctx context.Context, req interface{}) (interface{}, error) {
+			md, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				md = metadata.New(nil)
+			}
+
+			md.Set("authorization", interceptor.accessToken)
+
+			ctx = metadata.NewOutgoingContext(ctx, md)
+			return next(ctx, req)
+		}
 	}
-
-	md.Set("authorization", interceptor.accessToken)
-
-	ctx = metadata.NewOutgoingContext(ctx, md)
-
-	return invoker(ctx, method, req, reply, cc, opts...)
 }

@@ -2,17 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net"
+	"net/http"
 
+	"github.com/satishbabariya/vault/pkg/proto"
 	"github.com/satishbabariya/vault/pkg/server/config"
-	"github.com/satishbabariya/vault/pkg/server/gen"
 	"github.com/satishbabariya/vault/pkg/server/interceptor"
 	"github.com/satishbabariya/vault/pkg/server/store"
 	"github.com/satishbabariya/vault/pkg/server/vault"
+	"github.com/twitchtv/twirp"
 
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -35,29 +34,18 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	// interceptors will be used to validate ghitub token
-	interceptor := interceptor.NewInterceptor(config)
-
-	// Create new gRPC server
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryInterceptor),
-		grpc.StreamInterceptor(interceptor.StreamInterceptor),
-	)
-
-	// Register the server with the gRPC server
+	// Initialize vault service
 	vault := vault.NewVaultServer(config, store)
 
-	// Register the services with the gRPC server.
-	gen.RegisterVaultServer(server, vault)
+	interceptor := interceptor.NewInterceptor(config)
 
-	// listen on the port
-	port := fmt.Sprintf("0.0.0.0:%s", config.Port)
-	listener, err := net.Listen("tcp", port)
+	// Create a new twirp server
+	handler := proto.NewVaultServer(vault, twirp.WithServerInterceptors(interceptor.NewVaultInterceptor()))
+
+	// Create a new http server
+	logrus.Info("Starting vault server on port: ", config.Port)
+	err = http.ListenAndServe("0.0.0.0:"+config.Port, handler)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-
-	// start the server
-	logrus.Info("Starting gRPC server on port: ", port)
-	logrus.Fatal(server.Serve(listener))
 }

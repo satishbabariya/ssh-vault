@@ -3,15 +3,14 @@ package vault
 import (
 	"context"
 
-	"github.com/satishbabariya/vault/pkg/server/config"
-	"github.com/satishbabariya/vault/pkg/server/gen"
-	"github.com/satishbabariya/vault/pkg/server/store"
-
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/satishbabariya/vault/pkg/proto"
+	"github.com/satishbabariya/vault/pkg/server/config"
+	"github.com/satishbabariya/vault/pkg/server/store"
 )
 
 type VaultServer struct {
-	gen.UnimplementedVaultServer
+	// gen.UnimplementedVaultServer
 	config *config.Config
 	store  *store.Store
 }
@@ -23,8 +22,8 @@ func NewVaultServer(config *config.Config, store *store.Store) *VaultServer {
 	}
 }
 
-func (v *VaultServer) GetConfig(context.Context, *empty.Empty) (*gen.AuthConfigResponse, error) {
-	return &gen.AuthConfigResponse{
+func (v *VaultServer) GetConfig(context.Context, *empty.Empty) (*proto.AuthConfigResponse, error) {
+	return &proto.AuthConfigResponse{
 		GithubHost:     v.config.GitHubHost,
 		GithubClientId: v.config.GithubClientID,
 	}, nil

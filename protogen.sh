@@ -34,12 +34,15 @@ if ! which protoc-gen-go > /dev/null; then
 fi
 
 # remove pkg/server/gen directory if it exists
-if [ -d pkg/server/gen ]; then
-    rm -rf pkg/server/gen
+if [ -d pkg/proto ]; then
+    rm -rf pkg/proto
 fi
 
-mkdir -p pkg/server/gen
+mkdir -p pkg/proto
 
-protoc --proto_path=. --go_out=pkg/server/gen --go_opt=paths=source_relative \
-    --go-grpc_out=pkg/server/gen --go-grpc_opt=paths=source_relative \
-    *.proto
+if ! which protoc-gen-twirp > /dev/null; then
+  go install github.com/twitchtv/twirp/protoc-gen-twirp@latest
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+fi
+
+protoc --twirp_out=. --go_out=. *.proto

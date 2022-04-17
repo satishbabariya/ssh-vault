@@ -3,59 +3,45 @@ package client
 import (
 	"context"
 	"fmt"
-
-	"github.com/satishbabariya/vault/pkg/client/interceptor"
-	"github.com/satishbabariya/vault/pkg/server/gen"
+	"net/http"
 
 	"github.com/cli/oauth"
 	"github.com/cli/oauth/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/satishbabariya/vault/pkg/client/interceptor"
+	"github.com/satishbabariya/vault/pkg/proto"
+	"github.com/twitchtv/twirp"
 	"github.com/zalando/go-keyring"
-	"google.golang.org/grpc"
 )
 
 type VaultClient struct {
-	conn   *grpc.ClientConn
-	client gen.VaultClient
+	client proto.Vault
 }
 
-func NewClient(ctx context.Context) (*VaultClient, error) {
+func NewClient(ctx context.Context, baseURL string) (*VaultClient, error) {
 	token, err := keyring.Get("vault", "token")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token: %v", err)
 	}
 
 	interceptor := interceptor.NewClientInterceptor(token)
-	conn, err := grpc.DialContext(ctx, "localhost:1203", grpc.WithInsecure(), grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor))
-	if err != nil {
-		return nil, err
-	}
+	client := proto.NewVaultProtobufClient(baseURL, &http.Client{}, twirp.WithClientInterceptors(interceptor.AuthInterceptor()))
 
-	return NewVaultClient(conn), nil
-}
-
-func NewClientUnsafe(ctx context.Context) (*VaultClient, error) {
-	conn, err := grpc.DialContext(ctx, "localhost:1203", grpc.WithInsecure())
-	if err != nil {
-		return nil, err
-	}
-
-	return NewVaultClient(conn), nil
-}
-
-func NewVaultClient(conn *grpc.ClientConn) *VaultClient {
 	return &VaultClient{
-		conn:   conn,
-		client: gen.NewVaultClient(conn),
-	}
+		client: client,
+	}, nil
 }
 
-func (v *VaultClient) Close() error {
-	return v.conn.Close()
+func NewClientUnsafe(ctx context.Context, baseURL string) (*VaultClient, error) {
+	client := proto.NewVaultProtobufClient(baseURL, &http.Client{})
+
+	return &VaultClient{
+		client: client,
+	}, nil
 }
 
 func (v *VaultClient) Login(ctx context.Context) error {
-	t, err := v.AuthenticateWithGithub(ctx)
+	t, err := v.authenticateWithGithub(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to store token: %v", err)
 	}
@@ -71,7 +57,7 @@ func (v *VaultClient) Login(ctx context.Context) error {
 	return nil
 }
 
-func (v *VaultClient) AuthenticateWithGithub(ctx context.Context) (*api.AccessToken, error) {
+func (v *VaultClient) authenticateWithGithub(ctx context.Context) (*api.AccessToken, error) {
 	config, err := v.client.GetConfig(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, err
