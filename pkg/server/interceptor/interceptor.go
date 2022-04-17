@@ -22,7 +22,6 @@ package interceptor
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/satishbabariya/vault/pkg/server/config"
 	"github.com/satishbabariya/vault/pkg/server/gh"
@@ -84,8 +83,6 @@ func (interceptor *Interceptor) authorize(ctx context.Context, method string, pa
 	}
 
 	accessToken := values[0]
-
-	fmt.Println("accessToken: ", accessToken)
 
 	gh_user, err := gh.GetGithubUserFromToken(accessToken)
 	if err != nil {
