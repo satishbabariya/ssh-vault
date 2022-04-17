@@ -154,6 +154,8 @@ func main() {
 					return err
 				}
 
+				logrus.Info("Login successful")
+
 				return nil
 			},
 		},
@@ -161,7 +163,14 @@ func main() {
 			Name:  "logout",
 			Usage: `Logout from SSH Vault`,
 			Action: func(c *cli.Context) error {
-				return keyring.Delete("vault", "token")
+				err := keyring.Delete("vault", "token")
+				if err != nil {
+					return err
+				}
+
+				logrus.Info("Logout successful")
+
+				return nil
 			},
 		},
 		{
