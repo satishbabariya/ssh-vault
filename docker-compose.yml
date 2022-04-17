@@ -23,7 +23,7 @@ services:
     environment:
       - VAULT_SECRET=secret
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/vault?sslmode=disable
-      - GITHUB_CLIENT_ID=af0cc6a58498de1f11b6
+      - GITHUB_CLIENT_ID=<GITHUB_CLIENT_ID>
     ports:
       - "1203:1203"
     networks:
