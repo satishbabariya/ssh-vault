@@ -82,3 +82,12 @@ func (v *VaultClient) authenticateWithGithub(ctx context.Context) (*api.AccessTo
 
 	return accessToken, nil
 }
+
+func (v *VaultClient) ListRemoteHosts(ctx context.Context) ([]*proto.RemoteHost, error) {
+	remotes, err := v.client.ListRemoteHosts(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return remotes.RemoteHosts, nil
+}

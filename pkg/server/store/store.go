@@ -118,6 +118,16 @@ func (store *Store) IdentityExists(ctx context.Context, github_id string) (bool,
 	return exists, nil
 }
 
+func (store *Store) GetIdentity(ctx context.Context, github_id string) (*model.Identity, error) {
+	identity := &model.Identity{}
+	err := store.db.NewSelect().Model(identity).Where("github_id = ?", github_id).Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return identity, nil
+}
+
 func (store *Store) CreateIdentity(ctx context.Context, github_id string) error {
 	identity := &model.Identity{
 		GithubID: github_id,
@@ -128,4 +138,24 @@ func (store *Store) CreateIdentity(ctx context.Context, github_id string) error 
 	}
 
 	return nil
+}
+
+func (store *Store) ListRemotes(ctx context.Context, ids []int64) ([]*model.Remote, error) {
+	remotes := []*model.Remote{}
+	err := store.db.NewSelect().Model(&remotes).Where("id IN (?)", ids).Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return remotes, nil
+}
+
+func (store *Store) GetPermissions(ctx context.Context, identity *model.Identity) ([]*model.Permission, error) {
+	permissions := []*model.Permission{}
+	err := store.db.NewSelect().Model(&permissions).Where("identity_id = ?", identity.ID).Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return permissions, nil
 }

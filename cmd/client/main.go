@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/satishbabariya/vault/pkg/client"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -60,7 +61,30 @@ func main() {
 					return err
 				}
 
-				logrus.Info("Listing SSH Vault remote hosts", vault)
+				remotes, err := vault.ListRemoteHosts(c.Context)
+				if err != nil {
+					return err
+				}
+
+				// TODO: print remotes
+				t := table.NewWriter()
+				t.SetOutputMirror(os.Stdout)
+				t.SetStyle(table.StyleLight)
+				t.AppendHeader(table.Row{
+					"Name",
+					"Host",
+					"Port",
+				})
+
+				for _, remote := range remotes {
+					t.AppendRow(table.Row{
+						remote.Name,
+						remote.Host,
+						remote.Port,
+					})
+				}
+
+				t.Render()
 
 				return nil
 			},
