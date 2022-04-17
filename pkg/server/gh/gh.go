@@ -8,8 +8,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func GetGithubUserFromToken(token string) (*github.User, error) {
-	ctx := context.Background()
+func GetGithubUserFromToken(ctx context.Context, token string) (*github.User, error) {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)

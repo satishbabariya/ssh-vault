@@ -84,7 +84,7 @@ func (interceptor *Interceptor) authorize(ctx context.Context, method string, pa
 
 	accessToken := values[0]
 
-	gh_user, err := gh.GetGithubUserFromToken(accessToken)
+	gh_user, err := gh.GetGithubUserFromToken(ctx, accessToken)
 	if err != nil {
 		return status.Errorf(codes.Unauthenticated, "invalid access token")
 	}
