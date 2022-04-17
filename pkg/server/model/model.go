@@ -12,7 +12,7 @@ type Identity struct {
 
 type Remote struct {
 	ID          int64        `bun:"id,pk,autoincrement"`
-	Name        string       `bun:"name" validate:"required"`
+	Name        string       `bun:"name,unique" validate:"required"`
 	Host        string       `bun:"host,unique" validate:"required"`
 	Port        int          `bun:"port" validate:"required"`
 	CreatedAt   time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
