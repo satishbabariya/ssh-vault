@@ -14,6 +14,8 @@ require (
 	github.com/uptrace/bun/driver/pgdriver v1.1.3
 	github.com/urfave/cli/v2 v2.4.0
 	github.com/zalando/go-keyring v0.2.1
+	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 )
@@ -29,7 +31,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stretchr/testify v1.7.1 // indirect
-	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
