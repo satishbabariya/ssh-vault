@@ -22,7 +22,16 @@ import (
 )
 
 func main() {
-	store, err := store.Open("./vault.db")
+	// db filepath
+	dbFile := "vault.db"
+	dbfilepath := fmt.Sprintf("%s/.vault/%s", os.Getenv("HOME"), dbFile)
+
+	// create directory if not exists
+	if _, err := os.Stat(fmt.Sprintf("%s/.vault", os.Getenv("HOME"))); os.IsNotExist(err) {
+		os.Mkdir(fmt.Sprintf("%s/.vault", os.Getenv("HOME")), 0755)
+	}
+
+	store, err := store.Open(dbfilepath)
 	if err != nil {
 		log.Fatal(err)
 	}
