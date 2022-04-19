@@ -38,7 +38,7 @@ func main() {
 	defer store.Close()
 
 	app := &cli.App{
-		Name:        "sshv",
+		Name:        "vault",
 		Usage:       "SSH Vault",
 		Description: `SSH Vault is a tool for managing SSH keys.`,
 	}
